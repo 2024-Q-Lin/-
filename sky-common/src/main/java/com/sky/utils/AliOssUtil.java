@@ -1,17 +1,31 @@
 package com.sky.utils;
 
-import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.OSSException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import java.io.ByteArrayInputStream;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.UUID;
 
+/**
+ * 阿里云 OSS 工具类
+ */
+
+/**
+ * Could not autowire. No beans of 'String' type found. 的错误，
+ * 实际上并不是 Spring 尝试用 @Autowired 注入基本类型，而是因为你使用了 Lombok 的 @AllArgsConstructor 注解，
+ * 它自动生成了一个包含所有字段的构造函数。而 Spring 在尝试实例化这个类时，找不到合适的构造函数参数（即无法找到对应的 Bean）来进行注入。
+ * <p>
+ * Spring 在实例化 AliOssUtil 类时，会尝试为所有构造函数参数找到对应的 Bean。由于 String 类型的基本值（如 null）并不是 Bean，
+ * Spring 无法找到对应的 Bean 来注入这些构造函数参数，因此会抛出 Could not autowire. No beans of 'String' type found. 的错误。
+ */
 @Data
 @AllArgsConstructor
 @Slf4j
+//@Component
 public class AliOssUtil {
 
     private String endpoint;
@@ -19,50 +33,29 @@ public class AliOssUtil {
     private String accessKeySecret;
     private String bucketName;
 
-    /**
-     * 文件上传
-     *
-     * @param bytes
-     * @param objectName
-     * @return
-     */
-    public String upload(byte[] bytes, String objectName) {
+    public String upload(MultipartFile file){
 
-        // 创建OSSClient实例。
-        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
-
+        // 获取上传的文件的输入流
+        InputStream inputStream = null;
         try {
-            // 创建PutObject请求。
-            ossClient.putObject(bucketName, objectName, new ByteArrayInputStream(bytes));
-        } catch (OSSException oe) {
-            System.out.println("Caught an OSSException, which means your request made it to OSS, "
-                    + "but was rejected with an error response for some reason.");
-            System.out.println("Error Message:" + oe.getErrorMessage());
-            System.out.println("Error Code:" + oe.getErrorCode());
-            System.out.println("Request ID:" + oe.getRequestId());
-            System.out.println("Host ID:" + oe.getHostId());
-        } catch (ClientException ce) {
-            System.out.println("Caught an ClientException, which means the client encountered "
-                    + "a serious internal problem while trying to communicate with OSS, "
-                    + "such as not being able to access the network.");
-            System.out.println("Error Message:" + ce.getMessage());
-        } finally {
-            if (ossClient != null) {
-                ossClient.shutdown();
-            }
+            inputStream = file.getInputStream();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-        //文件访问路径规则 https://BucketName.Endpoint/ObjectName
-        StringBuilder stringBuilder = new StringBuilder("https://");
-        stringBuilder
-                .append(bucketName)
-                .append(".")
-                .append(endpoint)
-                .append("/")
-                .append(objectName);
+        // 避免文件覆盖
+        String originalFilename = file.getOriginalFilename();
+        String fileName = UUID.randomUUID().toString() + originalFilename.substring(originalFilename.lastIndexOf("."));
 
-        log.info("文件上传到:{}", stringBuilder.toString());
+        //上传文件到 OSS
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        ossClient.putObject(bucketName, fileName, inputStream);
 
-        return stringBuilder.toString();
+        //文件访问路径
+        String url = endpoint.split("//")[0] + "//" + bucketName + "." + endpoint.split("//")[1] + "/" + fileName;
+        // 关闭ossClient
+        ossClient.shutdown();
+        return url;// 把上传到oss的路径返回
     }
+
 }

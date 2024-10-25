@@ -40,8 +40,10 @@ public class GlobalExceptionHandler {
             String[] s = message.split(" ");
             String username = s[2];
             msg = username + MessageConstant.ALREADY_EXISTS;
+            log.error(msg);
             return Result.error(msg);
         } else {
+            log.error("SQL异常：{}", ex.getMessage());
             return Result.error(MessageConstant.UNKNOWN_ERROR);
         }
     }

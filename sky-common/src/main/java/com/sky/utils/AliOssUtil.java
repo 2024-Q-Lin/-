@@ -33,15 +33,10 @@ public class AliOssUtil {
     private String accessKeySecret;
     private String bucketName;
 
-    public String upload(MultipartFile file){
+    public String upload(MultipartFile file) throws IOException {
 
         // 获取上传的文件的输入流
-        InputStream inputStream = null;
-        try {
-            inputStream = file.getInputStream();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        InputStream inputStream = file.getInputStream();
 
         // 避免文件覆盖
         String originalFilename = file.getOriginalFilename();

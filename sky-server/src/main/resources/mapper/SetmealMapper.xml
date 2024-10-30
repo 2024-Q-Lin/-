@@ -60,4 +60,18 @@
             #{id}
         </foreach>
     </select>
+    <select id="getListByCategoryId" resultType="com.sky.entity.Setmeal">
+        select * from setmeal
+        <where>
+            <if test="categoryId != null">
+                category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="name != null">
+                and name like concat('%',#{name},'%')
+            </if>
+        </where>
+    </select>
 </mapper>

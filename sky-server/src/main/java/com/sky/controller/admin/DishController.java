@@ -10,6 +10,7 @@ import com.sky.vo.DishVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.logging.stdout.StdOutImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -146,4 +147,5 @@ public class DishController {
         Set keys = redisTemplate.keys(pattern);//查询所有符合该模式的key，不能使用通配符*
         redisTemplate.delete(keys);//delete后面可以接受一个集合参数
     }
+
 }

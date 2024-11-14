@@ -87,4 +87,12 @@ public interface SetmealMapper {
     @Select("select d.description,d.image,d.name,sd.copies from setmeal_dish sd left join dish d on d.id = sd.dish_id " +
             "where sd.setmeal_id = #{id}")
     List<DishItemVO> getDishBySetmealId(Long id);
+
+    /**
+     * 根据id查询套餐
+     * @param setmealId
+     * @return
+     */
+    @Select("select * from setmeal where id = #{setmealId}")
+    Setmeal getById(Long setmealId);
 }

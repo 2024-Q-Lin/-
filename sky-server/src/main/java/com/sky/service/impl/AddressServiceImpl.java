@@ -7,7 +7,7 @@ import com.sky.service.AddressService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Base64;
+import java.util.List;
 
 @Service
 public class AddressServiceImpl implements AddressService {
@@ -24,5 +24,14 @@ public class AddressServiceImpl implements AddressService {
         addressBook.setUserId(BaseContext.getCurrentId());
         addressBook.setIsDefault(0);
         addressMapper.save(addressBook);
+    }
+
+    /**
+     * 查询当前用户所有地址
+     * @return
+     */
+    @Override
+    public List<AddressBook> list(AddressBook addressBook) {
+        return addressMapper.list(addressBook);
     }
 }

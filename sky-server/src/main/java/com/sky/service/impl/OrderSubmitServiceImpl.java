@@ -185,4 +185,26 @@ public class OrderSubmitServiceImpl implements OrderSubmitService {
         }
         return new PageResult(pageResult.getTotal(),list);
     }
+
+
+    /**
+     * 查看订单详情
+     * @param id
+     * @return
+     */
+    @Override
+    public OrderVO showOrderDetail(Long id) {
+        // 根据订单id查询订单
+        Orders orders = orderMapper.getById(id);
+
+        // 新建一个OrderVO对象
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(orders,orderVO);
+
+        // 根据订单id查询订单明细
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+        orderVO.setOrderDetailList(orderDetailList);
+
+        return orderVO;
+    }
 }

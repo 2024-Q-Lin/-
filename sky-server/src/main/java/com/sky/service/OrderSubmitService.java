@@ -44,4 +44,25 @@ public interface OrderSubmitService {
      * @return
      */
     OrderVO showOrderDetail(Long id);
+
+    /**
+     * 取消订单
+     * @param id
+     */
+    void cancel(Long id) throws Exception;
+
+
+//    /**
+//     * 再来一单
+//     * @param id
+//     * @return
+//     */
+//    List<ShoppingCartDTO> repetition(Long id);
+
+
+    /**
+     * 再来一单
+     * @param id
+     */
+    void repetition(Long id);
 }

@@ -19,6 +19,8 @@ import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,10 +29,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderSubmitServiceImpl implements OrderSubmitService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderSubmitServiceImpl.class);
     @Autowired
     private AddressMapper addressMapper;
     @Autowired
@@ -206,5 +210,102 @@ public class OrderSubmitServiceImpl implements OrderSubmitService {
         orderVO.setOrderDetailList(orderDetailList);
 
         return orderVO;
+    }
+
+    /**
+     * 取消订单
+     * @param id
+     */
+    @Override
+    public void cancel(Long id) throws Exception {
+        //根据订单id查询订单
+        Orders ordersDB = orderMapper.getById(id);
+
+        //校验订单是否存在
+        if (ordersDB == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        //判断订单状态是否可以取消订单
+        if(ordersDB.getStatus() > 2) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        // todo 作用存疑
+        // 推测是因为简化对象，不需要更改的属性不用重复替换，直接跳过
+        Orders orders = new Orders();
+        orders.setId(ordersDB.getId());
+
+        // 如果订单处于待接单状态下取消，需要进行退款
+        if (ordersDB.getStatus().equals(OrderVO.TO_BE_CONFIRMED)) {
+            //调用微信支付退款接口
+            weChatPayUtil.refund(
+                    ordersDB.getNumber(),//订单号
+                    ordersDB.getNumber(),//退款订单号
+                    new BigDecimal(0.01),//退款金额，单位 元
+                    new BigDecimal(0.01));//原订单金额
+
+            //支付状态修改为退款
+            orders.setPayStatus(Orders.REFUND);
+        }
+
+        //更新订单状态、取消原因、取消时间
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消");
+        orders.setCancelTime(LocalDateTime.now());
+        orderMapper.update(orders);
+    }
+
+
+//    /**
+//     * 再来一单
+//     * @param id
+//     * @return
+//     */
+//    @Override
+//    public List<ShoppingCartDTO> repetition(Long id) {
+//        Orders orders = orderMapper.getById(id);
+//        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+//
+//        //创建一个集合，用于存放购物车数据
+//        List<ShoppingCartDTO> shoppingCartDTOList = new ArrayList<>();
+//
+//        if (orderDetailList != null && orderDetailList.size() > 0) {
+//            for (OrderDetail orderDetail : orderDetailList) {
+//                // 构造购物车对象
+//                ShoppingCartDTO shoppingCartDTO = new ShoppingCartDTO();
+//                BeanUtils.copyProperties(orderDetail, shoppingCartDTO);
+//                shoppingCartDTOList.add(shoppingCartDTO);
+//            }
+//        }
+//        return shoppingCartDTOList;
+//    }
+
+    /**
+     * 再来一单
+     * @param id
+     */
+    @Override
+    public void repetition(Long id) {
+        // 查询当前用户id
+        Long userId = BaseContext.getCurrentId();
+
+        // 根据订单id查询当前订单详情
+        List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(id);
+
+        // 将订单详情对象转换为购物车对象
+        List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(x -> {
+            ShoppingCart shoppingCart = new ShoppingCart();
+
+            // 将原订单详情里面的菜品信息重新复制到购物车对象中
+            BeanUtils.copyProperties(x, shoppingCart, "id");// 排除id，避免id重复
+            shoppingCart.setUserId(userId);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+
+            return shoppingCart;
+        }).collect(Collectors.toList());
+
+        // 将购物车对象批量添加到数据库
+        shoppingCartMapper.insertBatch(shoppingCartList);
     }
 }
